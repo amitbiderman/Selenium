@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from .mykeywords import Search
+from .mykeywords import Setting
 from .database import Sql
 from .Email import Email
 
@@ -54,7 +55,7 @@ class Yad2(object):
 
     def run(self):
         self.start = time.time()
-        self.sql = Sql(self.keywords.db_file_name)
+        self.sql = Sql(self.keywords.data_dict["db_file_name"])
         # Checking before new items are added if file exists and if it does - checks price changes
         self.daily_report_file_check()
         if self.sql.file_check():
@@ -68,11 +69,12 @@ class Yad2(object):
             print("No new items found!")
         self.time_took()
         self.teardown()
-        if os.stat(self.keywords.status_file_name).st_size != 0:
-            email = Email(self.keywords.status_file_name, self.keywords.gmail_sender, self.keywords.gmail_receiver,
-                          self.keywords.gmail_password)
+        if os.stat(self.keywords.data_dict["status_file_name"]).st_size != 0:
+            email = Email(self.keywords.data_dict["status_file_name"], self.keywords.data_dict["gmail_sender"]
+                          , self.keywords.data_dict["gmail_receiver"], self.keywords.data_dict["gmail_password"])
             email.send()
 
+    # need to change CSS selector to xpath finder OR id !!
     def search(self):
         self.driver.get("https://www.yad2.co.il/products/all")
         self.driver.maximize_window()
@@ -82,12 +84,13 @@ class Yad2(object):
             expected_conditions.visibility_of_element_located((By.CSS_SELECTOR, ".heading")))
         self.driver.find_element(By.CSS_SELECTOR, ".search_column:nth-child(2) > .search_select .text_input").click()
         self.driver.find_element(By.CSS_SELECTOR, ".search_column:nth-child(2) > .search_select .text_input").send_keys(
-            self.keywords.search_category)
+            self.keywords.data_dict["search_category"])
         self.driver.find_element(By.CSS_SELECTOR, "span > strong").click()
-        self.driver.find_element(By.NAME, "info").send_keys(self.keywords.search_keyword)
+        self.driver.find_element(By.NAME, "info").send_keys(self.keywords.data_dict["search_keyword"])
         self.driver.find_element(By.CSS_SELECTOR, ".range_inputs > .y2_text:nth-child(1) .text_input").send_keys(
-            self.keywords.lowest_price)
-        self.driver.find_element(By.CSS_SELECTOR, ".y2_text:nth-child(2) .text_input").send_keys(self.keywords.highest_price)
+            self.keywords.data_dict["lowest_price"])
+        self.driver.find_element(By.CSS_SELECTOR, ".y2_text:nth-child(2) .text_input").send_keys\
+            (self.keywords.data_dict["highest_price"])
         self.driver.find_element(By.CSS_SELECTOR, ".filter_btn").click()
         self.driver.find_element(By.CSS_SELECTOR, ".filter_btn").click()
         WebDriverWait(self.driver, 50000).until(
@@ -95,7 +98,7 @@ class Yad2(object):
         time.sleep(2)
 
     def collecting_data(self):
-        while self.num_path_tracker != self.keywords.num_of_products:
+        while self.num_path_tracker != self.keywords.data_dict["num_of_products"]:
             try:
                 # scrolling down
                 self.driver.execute_script("window.scrollTo(0, {})".format(self.y_scroll))
@@ -153,7 +156,7 @@ class Yad2(object):
 
     def pages_check(self):
         # If wanted number of products reached - pass this function
-        if self.num_products != self.keywords.num_of_products:
+        if self.num_products != self.keywords.data_dict["num_of_products"]:
             try:
                 self.driver.find_element(By.LINK_TEXT, "{}".format(self.page_num)).click()
                 self.page_num += 1
@@ -175,24 +178,24 @@ class Yad2(object):
 
     # Deleting file content, or creating it.
     def daily_report_file_check(self):
-        if os.path.exists(self.keywords.status_file_name):
-            file = open(self.keywords.status_file_name, "r+")
+        if os.path.exists(self.keywords.data_dict["status_file_name"]):
+            file = open(self.keywords.data_dict["status_file_name"], "r+")
             file.truncate(0)
             file.close()
         else:
-            f = open(self.keywords.status_file_name, 'w+')
+            f = open(self.keywords.data_dict["status_file_name"], 'w+')
             f.close()
 
     # Inserting content to daily report file
     def daily_report(self, x):
-        with open(self.keywords.status_file_name, 'a') as f:
+        with open(self.keywords.data_dict["status_file_name"], 'a') as f:
             f.write(x)
 
     # Checking prices updates of already saved items in DB
     def price_check(self):
         print("Checking prices of Yesterday's items...")
         try:
-            with sqlite3.connect("{}".format(self.keywords.db_file_name)) as conn:
+            with sqlite3.connect("{}".format(self.keywords.data_dict["db_file_name"])) as conn:
                 conn.row_factory = lambda mycursor, row: row[0]
                 mycursor = conn.cursor()
                 url_data = mycursor.execute('SELECT url FROM Items').fetchall()
