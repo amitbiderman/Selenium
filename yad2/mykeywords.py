@@ -70,6 +70,7 @@ class Search(object):
         with open('password.txt', 'r') as f:
             self.gmail_password = json.load(f)
 
+    # TODO: To be able to change only one parameter in the file
     def menu_2(self):
         try:
             data = {"search_category": input("Please enter Search Category"),
@@ -80,11 +81,11 @@ class Search(object):
                     "db_file_name": input("Please enter Data Base File Name (With sqlite ending!!)"),
                     "status_file_name": input("Please enter Email-Status File Name"),
                     "gmail_sender": input("Please enter Email of sender"),
-                    "gmail_receiver": input("Please enter Email of receiver"),
-                    "gmail_password": input("Please enter password of sender (Will be saved in a different file)")}
+                    "gmail_receiver": input("Please enter Email of receiver")}
+            self.gmail_password = {"gmail_password": input("Please enter password of sender (Will be saved in a different file)")}
             while True:
-                if not data["data_base_file_name"].endswith('.sqlite'):
-                    data["data_base_file_name"] = input("Please enter Data Base File Name (With .sqlite ending!)")
+                if not data["db_file_name"].endswith('.sqlite'):
+                    data["db_file_name"] = input("Please enter Data Base File Name (With .sqlite ending!)")
                 else:
                     break
             while True:
@@ -105,7 +106,9 @@ class Search(object):
 
     def menu_3(self):
         categories_show = ["Search Category", "Search Keyword", "Number of Products", "Lowest Price",
-                           "Highest Price", "Data Base File Name", "Email-Status File Name"]
+                           "Highest Price", "Data Base File Name", "Email-Status File Name",
+                           "Email Of Sender", "Email Of Receiver"]
+
         num = 0
         print("\n")
         with open(self.keys_file_name, 'r') as f:

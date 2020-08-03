@@ -48,6 +48,30 @@ class Yad2(object):
         self.last_viewed_item = ''
         self.text = ''
         self.price_change = ''
+        self.sql = None
+        self.start = 0
+        self.end = 0
+
+    def run(self):
+        self.start = time.time()
+        self.sql = Sql(self.keywords.db_file_name)
+        # Checking before new items are added if file exists and if it does - checks price changes
+        self.daily_report_file_check()
+        if self.sql.file_check():
+            self.price_check()
+        self.search()
+        self.sql.create_table()
+        print("Searching...")
+        self.num_products = self.collecting_data()
+        self.end = time.time()
+        if self.num_products == 0:
+            print("No new items found!")
+        self.time_took()
+        self.teardown()
+        if os.stat(self.keywords.status_file_name).st_size != 0:
+            email = Email(self.keywords.status_file_name, self.keywords.gmail_sender, self.keywords.gmail_receiver,
+                          self.keywords.gmail_password)
+            email.send()
 
     def search(self):
         self.driver.get("https://www.yad2.co.il/products/all")
@@ -87,7 +111,7 @@ class Yad2(object):
                 self.vars["name"] = self.driver.find_element(By.CSS_SELECTOR, "#accordion_wide_{} .title".format(
                     self.num_path_tracker)).text
                 # avoiding duplicates !
-                if not sql.new_item(self.vars["name"]):
+                if not self.sql.new_item(self.vars["name"]):
                     # product description
                     self.vars["description"] = self.driver.find_element(By.CSS_SELECTOR, ".details_text").text
                     # product price
@@ -112,19 +136,19 @@ class Yad2(object):
                     self.num_products += 1
                     # printing items found
                     print("\r", "Found: ", self.num_products, " Items", end='', sep='', flush=True)
-                    yad2.inserting_data()
+                    self.inserting_data()
                 else:
                     self.driver.find_element(By.CSS_SELECTOR, ".y2i_close").click()
                     self.num_path_tracker += 1
                     self.y_scroll += 200
-                    yad2.collecting_data()
+                    self.collecting_data()
             except NoSuchElementException:
-                yad2.pages_check()
+                self.pages_check()
         return self.num_products
 
     def inserting_data(self):
-        Sql.insert(self, self.id, self.vars["name"], self.vars["price"], self.vars["description"],
-                   self.vars["date"], self.vars["city"], self.product_url)
+        self.sql.insert(self.id, self.vars["name"], self.vars["price"], self.vars["description"],
+                        self.vars["date"], self.vars["city"], self.product_url)
         self.id += 1
 
     def pages_check(self):
@@ -135,15 +159,14 @@ class Yad2(object):
                 self.page_num += 1
                 self.num_path_tracker = 0
                 time.sleep(5)
-                yad2.collecting_data()
+                self.collecting_data()
             except NoSuchElementException:
                 exit()
         else:
             pass
 
-    @staticmethod
-    def time_took():
-        total_time = float(abs(start - end))
+    def time_took(self):
+        total_time = float(abs(self.start - self.end))
         if total_time > 60:
             total_time = total_time / 60
             print("\nTime took:", "%.2f" % total_time, "Minutes")
@@ -190,7 +213,7 @@ class Yad2(object):
                 if new_price != price_data[num]:
                     self.price_change = ("The price of the product: {} , has changed. Was:{}, Now:{}"
                                     .format(name_data[num], price_data[num], new_price[num]))
-                    yad2.daily_report(self.price_change)
+                    self.daily_report(self.price_change)
                 num += 1
             print("All prices are up to date!")
         # If a DB file created before but with no items(script stopped)
@@ -204,36 +227,15 @@ class Yad2(object):
         pass
 
     def teardown(self):
-        if num_products != 0:
-            self.text = ("Number of today's new products found: {}".format(num_products))
-            yad2.daily_report(self.text)
+        if self.num_products != 0:
+            self.text = ("Number of today's new products found: {}".format(self.num_products))
+            self.daily_report(self.text)
         self.driver.close()
-
-    def run(self):
-        pass
 
 
 def main():
-    start = time.time()
     yad2 = Yad2()
-    sql = Sql(yad2.keywords.db_file_name)
-    # Checking before new items are added if file exists and if it does - checks price changes
-    yad2.daily_report_file_check()
-    if sql.file_check():
-        yad2.price_check()
-    yad2.search()
-    sql.create_table()
-    print("Searching...")
-    num_products = yad2.collecting_data()
-    end = time.time()
-    if num_products == 0:
-        print("No new items found!")
-    yad2.time_took()
-    yad2.teardown()
-    if os.stat(yad2.keywords.status_file_name).st_size != 0:
-        email = Email(yad2.keywords.status_file_name, yad2.keywords.gmail_sender, yad2.keywords.gmail_receiver,
-                      yad2.keywords.gmail_password)
-        email.send()
+    yad2.run()
 
 
 if __name__ == '__main__':
