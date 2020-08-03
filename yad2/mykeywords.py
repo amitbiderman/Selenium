@@ -7,158 +7,167 @@ import os
 #  menu 1 works but need to assign real variables and return them to all files
 
 
+class Setting(object):
+    def __init__(self, name, description, data_type: type = str, ending=""):
+        self.name = name
+        self.description = description
+        self.data_type = data_type
+        self.data = None
+        self.ending = ending
+        if self.ending != "":
+            assert self.data_type is str
+
+    def get_name(self):
+        return self.name
+
+    def get_description(self):
+        return self.description
+
+    def get_from_user(self):
+        if self.ending == "":
+            extra_info = ""
+        else:
+            extra_info = f" (With {self.ending} ending!)"
+
+        while True:
+            data = input(f"Please enter {self.description}{extra_info}: ")
+
+            try:
+                if not data.endswith(self.ending):
+                    print(f"Please enter the correct file ending ({self.ending})!")
+                    continue
+
+                self.data = self.data_type(data)
+                break
+            except ValueError:
+                print("Please enter correct values!")
+
+        return self.data
+
+    def get_data(self):
+        return self.data
+
+    def set_data(self, data):
+        self.data = data
+
+
 class Search(object):
     def __init__(self, keys_file_name):
         self.keys_file_name = keys_file_name
-        self.words = ''
-        self.categories = []
-        self.search_category = None
-        self.search_keyword = None
-        self.num_of_products = None
-        self.lowest_price = None
-        self.highest_price = None
-        self.db_file_name = None
-        self.status_file_name = None
-        self.gmail_sender = None
-        self.gmail_receiver = None
-        self.gmail_password = None
+        self.settings = [
+            Setting("search_category", "Search Category"),
+            Setting("search_keyword", "Search Keyword"),
+            Setting("num_of_products", "Number of Products", data_type=int),
+            Setting("lowest_price", "Lowest Price", data_type=int),
+            Setting("highest_price", "Highest Price", data_type=int),
+            Setting("db_file_name", "Data Base File Name", ending=".sqlite"),
+            Setting("status_file_name", "Email-Status File Name", ending=".txt"),
+            Setting("gmail_sender", "Email of sender"),
+            Setting("gmail_receiver", "Email of receiver"),
+        ]
+        self.password_setting = Setting("gmail_password", "Email Sender Password (will be saved in a different file)")
+        self.data_dict = {}
 
     def keys_file(self):
         # Checking "keys" file status
         # If file exists and has no content
         if os.path.exists(self.keys_file_name) and os.stat(self.keys_file_name).st_size == 0:
             print("File has no content, please fill key words!")
-            self.menu_2()
+            self.change_all_settings()
         # If file doesn't exists
         elif not os.path.exists(self.keys_file_name):
             print("File Created! Please write new keywords!")
             f = open(self.keys_file_name, "x+")
             f.close()
-            self.menu_2()
+            self.change_all_settings()
         # TODO: if file content is not the way it should be (someone re-wrote it) - need to call menu_2 again
         else:
             self.menu()
 
     def menu(self):
-        answer = input("Choose a number option:\n"
-                       "1. To use keywords from file\n"
-                       "2. To write new keywords\n"
-                       "3. To read keywords from file\n"
-                       "4. To exit program\n")
-        if answer == "1":
-            self.menu_1()
-        elif answer == "2":
-            self.menu_2()
-        elif answer == "3":
-            self.menu_3()
-        elif answer == "4":
-            input("Good bye!\n"
-                  "Press Enter to leave")
-            return 1
-        else:
-            print('Please enter only 1, 2 or 3!!\n')
-            self.menu()
+        while True:
+            answer = input("Choose a number option:\n"
+                           "1. To use keywords from file\n"
+                           "2. To write new keywords\n"
+                           "3. To read keywords from file\n"
+                           "4. To exit program\n")
+            if answer == "1":
+                self.use_file()
+                break
+            elif answer == "2":
+                self.write_menu()
+            elif answer == "3":
+                self.read_file()
+            elif answer == "4":
+                input("Good bye!\n"
+                      "Press Enter to leave")
+                break
+            else:
+                print('Please enter only 1, 2 3 or 4!\n')
 
-    def menu_1(self):
+    def use_file(self):
         with open(self.keys_file_name, 'r') as f:
-            d = json.load(f)
+            self.data_dict = json.load(f)
 
-        for key in d:
-            value = d[key]
-            setattr(self, key, value)
+        for setting in self.settings:
+            name = setting.get_name()
+            if name in self.data_dict:
+                setting.set_data(self.data_dict[name])
 
         with open('password.txt', 'r') as f:
-            self.gmail_password = json.load(f)
+            self.password_setting.set_data(json.load(f))
 
     # TODO: To be able to change only one parameter in the file
-    def menu_2(self):
-        try:
-            data = {"search_category": input("Please enter Search Category"),
-                    "search_keyword": input("Please enter Search Keyword"),
-                    "num_of_products": int(input("Please enter Number of Products")),
-                    "lowest_price": int(input("Please enter Lowest Price")),
-                    "highest_price": int(input("Please enter Highest Price")),
-                    "db_file_name": input("Please enter Data Base File Name (With sqlite ending!!)"),
-                    "status_file_name": input("Please enter Email-Status File Name"),
-                    "gmail_sender": input("Please enter Email of sender"),
-                    "gmail_receiver": input("Please enter Email of receiver")}
-            self.gmail_password = {"gmail_password": input("Please enter password of sender (Will be saved in a different file)")}
-            while True:
-                if not data["db_file_name"].endswith('.sqlite'):
-                    data["db_file_name"] = input("Please enter Data Base File Name (With .sqlite ending!)")
-                else:
-                    break
-            while True:
-                if not data["status_file_name"].endswith('.txt'):
-                    data["status_file_name"] = input("Please enter Email-Status File Name (With .txt ending!)")
-                else:
-                    break
-            with open(self.keys_file_name, 'w') as f:
-                json.dump(data, f)
-            with open('password.txt', 'w+') as f:
-                json.dump(self.gmail_password, f)
-            print("All keywords entered!")
+    def write_menu(self):
+        while True:
+            required_keyword = input("Enter a specific keyword or ALL (default: ALL): ").strip().lower()
+            if required_keyword == "" or required_keyword == "all":
+                self.change_all_settings()
+                break
 
-            self.menu()
-        except ValueError:
-            print("Please enter correct values!")
-            self.menu_2()
+            self.use_file()
+            if self.change_specific(required_keyword):
+                self.write_file()
+                break
 
-    def menu_3(self):
-        categories_show = ["Search Category", "Search Keyword", "Number of Products", "Lowest Price",
-                           "Highest Price", "Data Base File Name", "Email-Status File Name",
-                           "Email Of Sender", "Email Of Receiver"]
+    def change_specific(self, required_keyword):
+        if self.password_setting.get_description().lower() == required_keyword:
+            self.password_setting.get_from_user()
+            return True
 
-        num = 0
+        for setting in self.settings:
+            if setting.get_description().lower() == required_keyword:
+                self.data_dict[setting.get_name()] = setting.get_from_user()
+                return True
+
+        print(f"Bad keyword name: {required_keyword}!")
+        return False
+
+    def change_all_settings(self):
+        self.data_dict = {}
+        for setting in self.settings:
+            self.data_dict[setting.get_name()] = setting.get_from_user()
+
+        self.password_setting.get_from_user()
+
+        self.write_file()
+
+        print("All keywords entered!")
+
+    def write_file(self):
+        with open(self.keys_file_name, 'w') as f:
+            json.dump(self.data_dict, f)
+
+        with open('password.txt', 'w+') as f:
+            json.dump(self.password_setting.get_data(), f)
+
+    def read_file(self):
+        self.use_file()
         print("\n")
-        with open(self.keys_file_name, 'r') as f:
-            self.words = json.load(f)
-            for i in self.words.values():
-                print(categories_show[num], ":", i)
-                num += 1
+        for setting in self.settings:
+            print(f"{setting.get_description()}: {setting.get_data()}")
         print("\n")
-        self.menu()
 
-
-# to make a file not exists yet
-
-# [search_category, search_keyword, num_of_products, lowest_price, highest_price, db_file_name, status_file_name] = whip.values()
-# asked if user want to tke keywords from file or not
-# to make a show keywords from file option too !
-# choice.lower == yes made:
-# open file as f:
-#  self.whip = eval(s)
-# search_category, search_keyword ....  = whip.values()
-
-""" IF NOT WORKING THEN SOMETHING FROM HERE : https://stackoverflow.com/questions/4803999/how-to-convert-a-file-into-a-dictionary"""
-# if choice.lower == not - made:
-#     data = {}
-#     data["search_category"] = input  search_category
-#     data["search_keyword"] = input  search_category
-#     data["lowest_price"] = int(input  search_category)
-#     data["highest_price"] = int(input  search_category)
-#     data["data_base_file_name"] = data_base_file_name)
-#     data["status_file_name] = data_base_file_name)
-# NEED TO FIND DIFFERENT NAMES FOR FILES!!!
-
-# class Search(object):
-#
-#     search_category = "ריהוט"
-#     search_keyword = "מדף"
-#     lowest_price = "200"
-#     highest_price = "500"
-#     db_file_name = "../shelf.sqlite"
-#     status_file_name = "../status.txt"
-#     num_of_products = 2
-#     with open("../Email.txt", "r") as f:
-#         email_content = f.read()
-#     email_content = email_content.split('\n')
-#     gmail_sender = email_content[0]
-#     gmail_password = email_content[1]
-#     if len(email_content) == 3:
-#         gmail_reciever = email_content[2]
-#     else:
-#         gmail_reciever = gmail_sender
 
 if __name__ == '__main__':
     search = Search("keys.txt")
