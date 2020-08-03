@@ -1,0 +1,6 @@
+password.txt
+*.sqlite
+*.log
+email.txt
+keys.txt
+**/__pycache__
