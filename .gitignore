@@ -4,3 +4,4 @@ password.txt
 email.txt
 keys.txt
 **/__pycache__
+**/.idea
