@@ -9,9 +9,6 @@ class Sql(object):
     def file_check(self):
         if os.path.exists(self.db_file_name):
             return True
-            # except PermissionError:
-            #     print("Please close file first!")
-            #     exit()
         else:
             f = open(self.db_file_name, "x")
             f.close()

@@ -1,6 +1,8 @@
 import smtplib
 
 # In the end of send_email - file should be deleted
+
+
 class Email(object):
     def __init__(self, status_file_name, gmail_sender, gmail_receiver, gmail_password):
         self.status_file_name = status_file_name
@@ -18,7 +20,7 @@ class Email(object):
         body = email_content
 
         message = """From: %s\nTo: %s\nSubject: %s\n\n%s
-        """ % (self.gmail_sender, ", ".join(gmail_receiver), subject, body)
+        """ % (self.gmail_sender, ", ".join(self.gmail_receiver), subject, body)
 
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.ehlo()
@@ -28,6 +30,3 @@ class Email(object):
         print('Daily report e-mail sent!')
 
 
-if __name__ == '__main__':
-    email = Email()
-    email.send()

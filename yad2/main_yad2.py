@@ -7,28 +7,25 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from .mykeywords import Search
-from .mykeywords import Setting
 from .database import Sql
 from .Email import Email
 
+# NEED TO COMMITE CHANGES
+
 """
 Program features:
-* Allowing easy insert of search keywords and limiting products number from a different file!
-* Going through as many search pages as needed
-* Inserting all data to SQLite (creating file automatically) !
+* Using a menu - allowing easy insert, read and overwrite search keywords
+* Going through as many search items and pages needed
+* Inserting all data to SQLite 
 * Scrolling down page as search go to allow see products in real time
 * Inserting only unique items to DB.
 * Counting total search time and products found
-* The user will delete items from the SQL db that are not relevant and will have access to URL's of the once who are.
-# Sending daily report e-mail with changed prices and new items found:
-# 1. Email details are in Email file
-# 2. Must check "allow less secure apps: OFF" on receiver email first
-* Option: to take keywords from mykeywords.text !
+* Sending daily report e-mail with changed prices and new items found:
+# - Must check on G-mail "allow less secure apps: OFF" on receiver email first
 """
 
 
 # TODO
-#  change mykeywords to take search info from text file or menu
 #  the program will run every day for the same / different amount of items inserted (will not add items that are
 #  already in the DB)
 
@@ -71,7 +68,7 @@ class Yad2(object):
         self.teardown()
         if os.stat(self.keywords.data_dict["status_file_name"]).st_size != 0:
             email = Email(self.keywords.data_dict["status_file_name"], self.keywords.data_dict["gmail_sender"]
-                          , self.keywords.data_dict["gmail_receiver"], self.keywords.data_dict["gmail_password"])
+                          , self.keywords.data_dict["gmail_receiver"], self.keywords.password_setting.get_data())
             email.send()
 
     # need to change CSS selector to xpath finder OR id !!
